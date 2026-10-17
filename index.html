@@ -483,7 +483,7 @@ index.html
           card.append(name, symbol, temps, chance, snow);
           forecast.appendChild(card);
         });
-
+await loadModelComparison(place);
         const updated = new Date().toLocaleTimeString([], {
           hour: "numeric",
           minute: "2-digit"
@@ -497,6 +497,104 @@ index.html
           "Unable to load weather. Check your internet connection and try again.";
         status.classList.add("error");
         forecast.innerHTML = "<p>Forecast data is temporarily unavailable.</p>";
+      }
+    }
+
+    async function loadModelComparison(place) {
+      const status = document.getElementById("model-status");
+      const output = document.getElementById("model-comparison");
+
+      status.textContent = "Loading GFS and ECMWF forecasts...";
+      output.innerHTML = "";
+
+      async function getModel(model) {
+        const params = new URLSearchParams({
+          latitude: place.latitude,
+          longitude: place.longitude,
+          daily: "temperature_2m_max,temperature_2m_min,snowfall_sum",
+          temperature_unit: "fahrenheit",
+          wind_speed_unit: "mph",
+          precipitation_unit: "inch",
+          models: model,
+          timezone: "auto",
+          forecast_days: "7"
+        });
+
+        const response = await fetch(
+          "https://api.open-meteo.com/v1/forecast?" + params
+        );
+
+        if (!response.ok) {
+          throw new Error(model + " forecast unavailable");
+        }
+
+        return response.json();
+      }
+
+      try {
+        const results = await Promise.allSettled([
+          getModel("ncep_gfs_global"),
+          getModel("ecmwf_ifs")
+        ]);
+
+        const modelNames = ["GFS", "ECMWF"];
+        let loaded = 0;
+
+        results.forEach((result, index) => {
+          if (result.status !== "fulfilled") {
+            console.error(modelNames[index] + " error:", result.reason);
+            return;
+          }
+
+          const daily = result.value.daily;
+          const card = document.createElement("div");
+          card.className = "day";
+
+          const heading = document.createElement("h3");
+          heading.textContent = modelNames[index];
+          card.appendChild(heading);
+
+          const subtitle = document.createElement("p");
+          subtitle.textContent = index === 0
+            ? "American model"
+            : "European model";
+          card.appendChild(subtitle);
+
+          daily.time.forEach((date, i) => {
+            const row = document.createElement("div");
+            row.className = "day-detail";
+
+            const high = daily.temperature_2m_max[i];
+            const low = daily.temperature_2m_min[i];
+            const snowCm = daily.snowfall_sum[i];
+            const snowIn = snowCm == null ? null : snowCm / 2.54;
+
+            row.textContent =
+              formatDay(date, i) + ": " +
+              (high == null ? "--" : Math.round(high)) + "° / " +
+              (low == null ? "--" : Math.round(low)) + "° · Snow: " +
+              (snowIn == null ? "--" : snowIn.toFixed(1) + '"');
+
+            card.appendChild(row);
+          });
+
+          output.appendChild(card);
+          loaded++;
+        });
+
+        if (loaded === 2) {
+          status.textContent = "Both model forecasts loaded.";
+        } else if (loaded === 1) {
+          status.textContent =
+            "Only one model loaded. Check back later for the other.";
+        } else {
+          status.textContent =
+            "Model forecasts unavailable. Your regular forecast still works.";
+        }
+      } catch (error) {
+        console.error(error);
+        status.textContent =
+          "Model comparison unavailable. Try again later.";
       }
     }
 
