@@ -500,50 +500,6 @@ index.html
       }
     }
 
-const heading = document.createElement("h3");
-      heading.textContent = model.name;
-
-      const description = document.createElement("p");
-      description.textContent =
-        model.name === "GFS"
-          ? "American forecast model"
-          : "European forecast model";
-
-      card.append(heading, description);
-
-      model.data.time.forEach((date, i) => {
-        const row = document.createElement("div");
-        row.className = "day-detail";
-
-        const snowCm = model.data.snowfall_sum[i];
-        const snowIn = snowCm == null ? null : snowCm / 2.54;
-        const snowText = snowIn == null
-          ? "N/A"
-          : snowIn.toFixed(1) + '"';
-
-        row.textContent =
-          formatDay(date, i) + ": " +
-          Math.round(model.data.temperature_2m_max[i]) + "° / " +
-          Math.round(model.data.temperature_2m_min[i]) + "° · " +
-          snowText + " snow";
-
-        card.appendChild(row);
-      });
-
-      output.appendChild(card);
-    });
-
-    status.textContent =
-      "Both model forecasts loaded for " + place.name + ".";
-
-  } catch (error) {
-    console.error(error);
-    status.textContent =
-      "Could not load both models. Try refreshing later.";
-    output.innerHTML = "";
-  }
-}
-    
     document.getElementById("location").addEventListener(
       "change", loadWeather
     );
