@@ -162,7 +162,82 @@ index.html
 
     #status { color: var(--muted); font-size: 13px; }
     .error { color: #ffb5b5 !important; }
+.snow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
 
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.gfs-dot { background: #72c9ff; }
+.ecmwf-dot { background: #ffbd69; }
+
+.snow-chart {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.snow-chart-day {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-light);
+}
+
+.snow-chart-date {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.snow-series {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  font-size: 12px;
+}
+
+.snow-bar-track {
+  height: 12px;
+  background: #09111f;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.snow-bar {
+  height: 100%;
+  width: 0;
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+
+.snow-gfs { background: #72c9ff; }
+.snow-ecmwf { background: #ffbd69; }
+
+.snow-amount {
+  text-align: right;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .snow-series {
+    grid-template-columns: 48px minmax(0, 1fr) 42px;
+    gap: 6px;
+  }
+}
     footer {
       padding: 24px 18px;
       border-top: 1px solid var(--border);
@@ -257,6 +332,18 @@ index.html
   </p>
   <p id="model-status">Loading model comparison...</p>
   <div id="model-comparison" class="forecast"></div>
+      <h3>7-Day Snowfall Comparison</h3>
+
+<div class="snow-legend">
+  <span><span class="legend-dot gfs-dot"></span> GFS — American</span>
+  <span><span class="legend-dot ecmwf-dot"></span> ECMWF — European</span>
+</div>
+
+<p id="snowfall-chart-status">
+  Waiting for model forecasts...
+</p>
+
+<div id="snowfall-chart" class="snow-chart"></div>
   <div class="note">
     Model snowfall is guidance, not a guaranteed snow total.
     Differences can reflect storm track, timing, and temperature.
@@ -503,9 +590,16 @@ await loadModelComparison(place);
     async function loadModelComparison(place) {
       const status = document.getElementById("model-status");
       const output = document.getElementById("model-comparison");
+      const chartStatus = document.getElementById("snowfall-chart-status");
+      const chart = document.getElementById("snowfall-chart");
 
       status.textContent = "Loading GFS and ECMWF forecasts...";
       output.innerHTML = "";
+      chart.innerHTML = "";
+
+      if (chartStatus) {
+        chartStatus.textContent = "Loading snowfall data...";
+      }
 
       async function getModel(model) {
         const params = new URLSearchParams({
@@ -521,7 +615,8 @@ await loadModelComparison(place);
         });
 
         const response = await fetch(
-          "https://api.open-meteo.com/v1/forecast?" + params
+          "https://api.open-meteo.com/v1/forecast?" +
+          params.toString()
         );
 
         if (!response.ok) {
@@ -538,15 +633,21 @@ await loadModelComparison(place);
         ]);
 
         const modelNames = ["GFS", "ECMWF"];
+        const modelData = {};
         let loaded = 0;
 
         results.forEach((result, index) => {
           if (result.status !== "fulfilled") {
-            console.error(modelNames[index] + " error:", result.reason);
+            console.error(
+              modelNames[index] + " error:",
+              result.reason
+            );
             return;
           }
 
           const daily = result.value.daily;
+          modelData[modelNames[index]] = daily;
+
           const card = document.createElement("div");
           card.className = "day";
 
@@ -567,7 +668,9 @@ await loadModelComparison(place);
             const high = daily.temperature_2m_max[i];
             const low = daily.temperature_2m_min[i];
             const snowCm = daily.snowfall_sum[i];
-            const snowIn = snowCm == null ? null : snowCm / 2.54;
+            const snowIn = snowCm == null
+              ? null
+              : snowCm / 2.54;
 
             row.textContent =
               formatDay(date, i) + ": " +
@@ -583,7 +686,8 @@ await loadModelComparison(place);
         });
 
         if (loaded === 2) {
-          status.textContent = "Both model forecasts loaded.";
+          status.textContent =
+            "Both model forecasts loaded for " + place.name + ".";
         } else if (loaded === 1) {
           status.textContent =
             "Only one model loaded. Check back later for the other.";
@@ -591,10 +695,101 @@ await loadModelComparison(place);
           status.textContent =
             "Model forecasts unavailable. Your regular forecast still works.";
         }
+
+        if (modelData.GFS && modelData.ECMWF && chart) {
+          const gfs = modelData.GFS;
+          const ecmwf = modelData.ECMWF;
+
+          const allSnow = [
+            ...gfs.snowfall_sum,
+            ...ecmwf.snowfall_sum
+          ]
+            .filter(value =>
+              value != null && Number.isFinite(value)
+            )
+            .map(value => value / 2.54);
+
+          const maxSnow = Math.max(1, ...allSnow);
+
+          chart.innerHTML = "";
+
+          gfs.time.forEach((date, i) => {
+            const dayCard = document.createElement("div");
+            dayCard.className = "snow-chart-day";
+
+            const dayLabel = document.createElement("div");
+            dayLabel.className = "snow-chart-date";
+            dayLabel.textContent = formatDay(date, i);
+            dayCard.appendChild(dayLabel);
+
+            const seriesList = [
+              {
+                name: "GFS",
+                value: gfs.snowfall_sum[i],
+                className: "snow-gfs"
+              },
+              {
+                name: "ECMWF",
+                value: ecmwf.snowfall_sum[i],
+                className: "snow-ecmwf"
+              }
+            ];
+
+            seriesList.forEach(series => {
+              const inches = series.value == null
+                ? null
+                : series.value / 2.54;
+
+              const row = document.createElement("div");
+              row.className = "snow-series";
+
+              const label = document.createElement("span");
+              label.textContent = series.name;
+
+              const track = document.createElement("div");
+              track.className = "snow-bar-track";
+
+              const bar = document.createElement("div");
+              bar.className = "snow-bar " + series.className;
+
+              const width = inches == null || inches <= 0
+                ? 0
+                : Math.max(1, inches / maxSnow * 100);
+
+              bar.style.width = Math.min(100, width) + "%";
+              track.appendChild(bar);
+
+              const amount = document.createElement("span");
+              amount.className = "snow-amount";
+              amount.textContent = inches == null
+                ? "--"
+                : inches.toFixed(1) + '"';
+
+              row.append(label, track, amount);
+              dayCard.appendChild(row);
+            });
+
+            chart.appendChild(dayCard);
+          });
+
+          if (chartStatus) {
+            chartStatus.textContent =
+              "Daily snowfall in inches for " + place.name +
+              ". Both models use the same bar scale.";
+          }
+        } else if (chartStatus) {
+          chartStatus.textContent =
+            "The chart needs both models. Try refreshing later.";
+        }
       } catch (error) {
         console.error(error);
         status.textContent =
           "Model comparison unavailable. Try again later.";
+
+        if (chartStatus) {
+          chartStatus.textContent =
+            "Snowfall chart unavailable. Try refreshing later.";
+        }
       }
     }
 
