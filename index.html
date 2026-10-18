@@ -2,13 +2,13 @@ index.html
 
 <!DOCTYPE html>
 <html lang="en">
-  <link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
   <title>Northeast Weather Lab</title>
   <meta name="description" content="Live weather, seven-day forecasts, and snowfall outlooks for New England and upstate New York.">
 
@@ -292,6 +292,26 @@ index.html
   #snow-map {
     height: 440px;
   }
+}
+    .snow-map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.snow-map-controls label {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.snow-map-controls select {
+  padding: 9px;
+  border-radius: 8px;
+  background: #172b46;
+  color: white;
+  border: 1px solid #526780;
 }
   </style>
 </head>
@@ -888,6 +908,7 @@ await loadModelComparison(place);
     loadWeather();
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
   const snowMapPlaces = [
   { name: "Buffalo", lat: 42.8864, lon: -78.8784 },
   { name: "Watertown", lat: 43.9748, lon: -75.9108 },
@@ -1043,5 +1064,6 @@ document.getElementById("snow-map-day")
   .addEventListener("change", loadSnowfallMap);
 
 loadSnowfallMap();
+    </script>
 </body>
 </html>
