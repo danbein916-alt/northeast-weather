@@ -290,14 +290,16 @@ index.html
 
 @media (max-width: 600px) {
   #snow-map {
-    height: 560px;
+  height: 560px;
   width: 100%;
+  display: block;
   border-radius: 12px;
   overflow: hidden;
   margin-top: 16px;
   background: #dbeafe;
-  }
-    .snow-map-controls {
+}
+
+.snow-map-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -316,6 +318,12 @@ index.html
   background: #172b46;
   color: white;
   border: 1px solid #526780;
+}
+
+@media (max-width: 600px) {
+  #snow-map {
+    height: 440px;
+  }
 }
   </style>
 </head>
