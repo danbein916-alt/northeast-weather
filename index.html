@@ -1174,7 +1174,35 @@ async function loadSnowfallMap() {
           : `${difference > 0 ? "+" : ""}${difference.toFixed(1)} inches`;
 
       const popup = `
-  DIL1
+  <div style="min-width:220px; color:#111; line-height:1.45">
+    <strong>${resort.name}</strong>
+    <div style="margin:6px 0">${dateLabel}</div>
+
+    <hr>
+
+    <strong>BASE (${resort.base.ft.toLocaleString()} ft)</strong>
+    ${formatMountainWeather(baseForecast, weatherDayIndex)}
+    <div style="margin-top:8px">
+      <strong>Base snowfall:</strong> ${formatSnow(baseInches)}
+    </div>
+
+    <hr>
+
+    <strong>SUMMIT (${resort.summit.ft.toLocaleString()} ft)</strong>
+    ${formatMountainWeather(summitForecast, weatherDayIndex)}
+    <div style="margin-top:8px">
+      <strong>Summit snowfall:</strong> ${formatSnow(summitInches)}
+    </div>
+
+    <div style="margin-top:7px">
+      <strong>Summit minus base:</strong> ${differenceText}
+    </div>
+
+    <div style="margin-top:8px;font-size:11px;color:#555">
+      High/low is for ${period === "total" ? "today" : dateLabel}.
+      Weather model: ${model === "ncep_gfs_global" ? "GFS" : "ECMWF"}
+    </div>
+  </div>
 `;
 
       // Put the marker between the base and summit locations.
