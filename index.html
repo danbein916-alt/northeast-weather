@@ -1048,7 +1048,54 @@ function getSnowfallInches(forecast, period) {
 function formatSnow(inches) {
   return inches === null ? "Unavailable" : `${inches.toFixed(1)} inches`;
 }
+function formatTemp(value) {
+  return Number.isFinite(value)
+    ? `${Math.round(value)}°F`
+    : "Unavailable";
+}
 
+function formatWind(speed, degrees) {
+  if (!Number.isFinite(speed) || !Number.isFinite(degrees)) {
+    return "Unavailable";
+  }
+
+  const directions = [
+    "N", "NE", "E", "SE",
+    "S", "SW", "W", "NW"
+  ];
+
+  const direction = directions[
+    Math.round(degrees / 45) % 8
+  ];
+
+  return `${Math.round(speed)} mph ${direction}`;
+}
+
+function formatMountainWeather(forecast, dayIndex) {
+  const current = forecast?.current;
+  const daily = forecast?.daily;
+
+  const high = daily?.temperature_2m_max?.[dayIndex];
+  const low = daily?.temperature_2m_min?.[dayIndex];
+
+  return `
+    <div style="margin-top:5px">
+      <strong>Current:</strong>
+      ${formatTemp(current?.temperature_2m)}
+    </div>
+    <div>
+      <strong>Wind:</strong>
+      ${formatWind(
+        current?.wind_speed_10m,
+        current?.wind_direction_10m
+      )}
+    </div>
+    <div>
+      <strong>High / Low:</strong>
+      ${formatTemp(high)} / ${formatTemp(low)}
+    </div>
+  `;
+}
 function forecastDateLabel(period, forecast) {
   if (period === "total") return "Next 7 days";
 
@@ -1079,7 +1126,10 @@ async function loadSnowfallMap() {
       latitude: locations.map(p => p.lat).join(","),
       longitude: locations.map(p => p.lon).join(","),
       elevation: locations.map(p => Math.round(p.ft * 0.3048)).join(","),
-      daily: "snowfall_sum",
+      current: "temperature_2m,wind_speed_10m,wind_direction_10m",
+      daily: "snowfall_sum,temperature_2m_max,temperature_2m_min",
+      temperature_unit: "fahrenheit",
+      wind_speed_unit: "mph",
       forecast_days: "7",
       timezone: "America/New_York",
       models: model
@@ -1111,11 +1161,12 @@ async function loadSnowfallMap() {
       const summitInches = getSnowfallInches(summitForecast, period);
 
       const dateLabel = forecastDateLabel(period, summitForecast);
-
-      const difference =
-        baseInches === null || summitInches === null
-          ? null
-          : summitInches - baseInches;
+      const weatherDayIndex =
+        period === "total" ? 0 : Number(period);
+            const difference =
+              baseInches === null || summitInches === null
+                ? null
+                : summitInches - baseInches;
 
       const differenceText =
         difference === null
@@ -1123,26 +1174,8 @@ async function loadSnowfallMap() {
           : `${difference > 0 ? "+" : ""}${difference.toFixed(1)} inches`;
 
       const popup = `
-        <div style="min-width:190px">
-          <strong>${resort.name}</strong>
-          <div style="margin:6px 0">${dateLabel}</div>
-          <hr>
-          <div>
-            <strong>Base</strong> (${resort.base.ft.toLocaleString()} ft):
-            ${formatSnow(baseInches)}
-          </div>
-          <div style="margin-top:5px">
-            <strong>Summit</strong> (${resort.summit.ft.toLocaleString()} ft):
-            ${formatSnow(summitInches)}
-          </div>
-          <div style="margin-top:7px">
-            <strong>Summit minus base:</strong> ${differenceText}
-          </div>
-          <div style="margin-top:8px;font-size:11px;color:#666">
-            Forecast model: ${model === "ncep_gfs_global" ? "GFS" : "ECMWF"}
-          </div>
-        </div>
-      `;
+  DIL1
+`;
 
       // Put the marker between the base and summit locations.
       const markerLat = (resort.base.lat + resort.summit.lat) / 2;
