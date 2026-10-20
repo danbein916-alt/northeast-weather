@@ -1090,8 +1090,11 @@ async function loadSnowfallMap() {
     );
 
     if (!response.ok) {
-      throw new Error(`Forecast API error: ${response.status}`);
-    }
+  const details = await response.text();
+  throw new Error(
+    `Forecast API error ${response.status}: ${details}`
+  );
+}
 
     const result = await response.json();
     const forecasts = Array.isArray(result) ? result : [result];
@@ -1168,11 +1171,11 @@ async function loadSnowfallMap() {
     );
 
   } catch (error) {
-    console.error("Ski resort snowfall map error:", error);
-    showSnowMapMessage(
-      "Could not load ski resort forecasts. Please refresh and try again."
-    );
-  }
+  console.error("Ski resort snowfall map error:", error);
+  showSnowMapMessage(
+    "Map error: " + error.message
+  );
+}
 }
 
 document.getElementById("snow-map-model")
